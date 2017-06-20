@@ -1,0 +1,24 @@
+{
+  "name": "elm-debouncer",
+  "version": "1.0.0",
+  "description": "Yet another Elm debouncer",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "elm": "^0.18.0"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gizra/elm-debouncer.git"
+  },
+  "author": "Ryan Rempel <ryan@gizra.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Gizra/elm-debouncer/issues"
+  },
+  "homepage": "https://github.com/Gizra/elm-debouncer#readme"
+}

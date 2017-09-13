@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "summary": "Yet another debouncer for Elm",
+    "summary": "The most comprehensive debouncer for Elm",
     "repository": "https://github.com/Gizra/elm-debouncer.git",
     "license": "MIT",
     "source-directories": [

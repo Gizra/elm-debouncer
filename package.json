@@ -1,7 +1,7 @@
 {
   "name": "elm-debouncer",
   "version": "1.0.0",
-  "description": "Yet another Elm debouncer",
+  "description": "The most comprehensive debouncer for Elm",
   "main": "index.js",
   "directories": {
     "test": "tests"

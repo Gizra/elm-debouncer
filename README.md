@@ -68,7 +68,7 @@ The idea of grouping events by time implies several questions:
 
 - Debouncing vs. throttling.
 
-  Do we want to wait for the inputs to "settle" before emitting anyhing, or
+  Do we want to wait for the inputs to "settle" before emitting anything, or
   should we emit on an interval while the debouncer is "in progress."
 
 Considering these three questions together, there seem to be three intervals

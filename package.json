@@ -8,9 +8,12 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "elm": "^0.18.0"
+    "elm": "^0.18.0",
+    "elm-test": "^0.18.9"
   },
-  "scripts": {},
+  "scripts": {
+    "test": "elm-test"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Gizra/elm-debouncer.git"

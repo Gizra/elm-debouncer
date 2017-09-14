@@ -12,7 +12,7 @@
     "elm-test": "^0.18.9"
   },
   "scripts": {
-    "test": "elm-test"
+    "test": "sh run-tests.sh"
   },
   "repository": {
     "type": "git",

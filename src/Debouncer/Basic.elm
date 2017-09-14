@@ -26,15 +26,11 @@ type, and handle it in your `update` function. Here's one example, where the
 `Msg` type. (To avoid some of the verbosity below, you can use one of the
 more specialized modules, assuming the specialization suits you).
 
-    import Debouncer.Basic exposing (Debouncer) as Debouncer
-
     type alias Model =
         { quietForOneSecond : Debouncer Msg Msg
-        , ...
+        , messages : List String
         }
 
-    -- A configuration that emits the last message provided, once no message
-    -- has been provided for 1 second.
     quietForOneSecondConfig : Debouncer.Config Msg Msg
     quietForOneSecondConfig =
         { emitWhenUnsettled = Nothing
@@ -43,16 +39,17 @@ more specialized modules, assuming the specialization suits you).
         , accumulator = \input accum -> Just input
         }
 
-    initialModel : Model
-    initialModel =
-        { quietForOneSecond : Debouncer.init quietForOneSecondConfig
-        , ...
-        }
+    init : ( Model, Cmd Msg )
+    init =
+        ( { quietForOneSecond = Debouncer.init quietForOneSecondConfig
+          , messages = []
+          }
+        , Cmd.none
+        )
 
     type Msg
         = MsgQuietForOneSecond (Debouncer.Msg Msg)
         | DoSomething
-        | ...
 
     update : Msg -> Model -> ( Model, Cmd Msg )
     update msg model =
@@ -70,26 +67,41 @@ more specialized modules, assuming the specialization suits you).
                 in
                     case emittedMsg of
                         Just emitted ->
-                            -- We got a `Msg` back to execute, so go ahead and
-                            -- do that recursively.
                             update emitted updatedModel
                                 |> Tuple.mapSecond (\cmd -> Cmd.batch [ cmd, mappedCmd ])
 
                         Nothing ->
-                            ( updatedMdel, mappedCmd)
+                            ( updatedModel, mappedCmd )
 
             DoSomething ->
-                ...
+                ( { model | messages = model.messages ++ [ "I did something" ] }
+                , Cmd.none
+                )
 
-            ... ->
+    view : Model -> Html Msg
+    view model =
+        div [ style [ ( "margin", "1em" ) ] ]
+            [ button
+                [ DoSomething
+                    |> provideInput
+                    |> MsgQuietForOneSecond
+                    |> onClick
+                ]
+                [ text "Click here repeatedly." ]
+            , p [] [ text " I'll add a message below once you stop clicking for one second." ]
+            , model.messages
+                |> List.map (\message -> p [] [ text message ])
+                |> div []
+            ]
 
-Then, to provide inputs, you can use `provideInput` something like this:
-
-    div
-        [ onClick <| MsgQuietForOneSecond (provideInput DoSomething) ]
-        [ text "Do something after you stop clicking for 1 second." ]
-
-And the rest is magic!
+    main : Program Never Model Msg
+    main =
+        Html.program
+            { init = init
+            , view = view
+            , update = update
+            , subscriptions = always Sub.none
+            }
 
 @docs Debouncer, Config, init
 

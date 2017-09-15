@@ -1,6 +1,5 @@
-module BasicTest exposing (..)
+module InternalTest exposing (..)
 
-import Debouncer.Basic exposing (cancel)
 import Debouncer.Internal exposing (..)
 import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, int, list, string)

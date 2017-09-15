@@ -1,6 +1,13 @@
-module Basic exposing (..)
+module Messages exposing (..)
 
-import Debouncer.Basic as Debouncer exposing (Debouncer, provideInput)
+{-| This does exactly the same thing as the `Basic` example, but it
+uses `Debouncer.Messages` instead of `Debouncer.Basic`. This simplifies
+your code in the (common) case where what you're debouncing is your
+own `Msg` type. (You would want `Debouncer.Basic` in other cases, since
+it is more general).
+-}
+
+import Debouncer.Messages as Debouncer exposing (Debouncer, provideInput)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -8,12 +15,12 @@ import Time exposing (Time)
 
 
 type alias Model =
-    { quietForOneSecond : Debouncer Msg Msg
+    { quietForOneSecond : Debouncer Msg
     , messages : List String
     }
 
 
-quietForOneSecondConfig : Debouncer.Config Msg Msg
+quietForOneSecondConfig : Debouncer.Config Msg
 quietForOneSecondConfig =
     { emitWhenUnsettled = Nothing
     , emitWhileUnsettled = Nothing
@@ -41,22 +48,19 @@ update msg model =
     case msg of
         MsgQuietForOneSecond subMsg ->
             let
-                ( subModel, subCmd, emittedMsg ) =
-                    Debouncer.update subMsg model.quietForOneSecond
-
-                mappedCmd =
-                    Cmd.map MsgQuietForOneSecond subCmd
+                ( subModel, cmd, emittedMsg ) =
+                    Debouncer.update MsgQuietForOneSecond subMsg model.quietForOneSecond
 
                 updatedModel =
                     { model | quietForOneSecond = subModel }
             in
                 case emittedMsg of
+                    Nothing ->
+                        ( updatedModel, cmd )
+
                     Just emitted ->
                         update emitted updatedModel
-                            |> Tuple.mapSecond (\cmd -> Cmd.batch [ cmd, mappedCmd ])
-
-                    Nothing ->
-                        ( updatedModel, mappedCmd )
+                            |> Tuple.mapSecond (\cmd2 -> Cmd.batch [ cmd, cmd2 ])
 
         DoSomething ->
             ( { model | messages = model.messages ++ [ "I did something" ] }

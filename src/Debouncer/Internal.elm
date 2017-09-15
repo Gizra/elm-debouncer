@@ -26,12 +26,49 @@ type Debouncer i o
     = Debouncer (Config i o) (State o)
 
 
+cancel : Debouncer i o -> Debouncer i o
+cancel (Debouncer config state) =
+    Debouncer config Settled
+
+
 type alias Config i o =
     { emitWhenUnsettled : Maybe Time
     , emitWhileUnsettled : Maybe Time
     , settleWhenQuietFor : Time
     , accumulator : i -> Maybe o -> Maybe o
     }
+
+
+init : Config i o -> Debouncer i o
+init config =
+    Debouncer (sanitizeConfig config) Settled
+
+
+{-| Sanitize the config to simplify some of the logic.
+-}
+sanitizeConfig : Config i o -> Config i o
+sanitizeConfig config =
+    { emitWhenUnsettled = nothingIfNegative config.emitWhenUnsettled
+    , emitWhileUnsettled = nothingIfNegative config.emitWhileUnsettled
+    , settleWhenQuietFor = zeroIfNegative config.settleWhenQuietFor
+    , accumulator = config.accumulator
+    }
+
+
+nothingIfNegative : Maybe number -> Maybe number
+nothingIfNegative =
+    Maybe.andThen
+        (\num ->
+            if num < 0 then
+                Nothing
+            else
+                Just num
+        )
+
+
+zeroIfNegative : number -> number
+zeroIfNegative =
+    max 0
 
 
 type State o

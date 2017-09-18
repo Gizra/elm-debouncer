@@ -204,33 +204,6 @@ init config =
     Debouncer.Internal.init config
 
 
-{-| Sanitize the config to simplify some of the logic.
--}
-sanitizeConfig : Config i o -> Config i o
-sanitizeConfig config =
-    { emitWhenUnsettled = nothingIfNegative config.emitWhenUnsettled
-    , emitWhileUnsettled = nothingIfNegative config.emitWhileUnsettled
-    , settleWhenQuietFor = zeroIfNegative config.settleWhenQuietFor
-    , accumulator = config.accumulator
-    }
-
-
-nothingIfNegative : Maybe number -> Maybe number
-nothingIfNegative =
-    Maybe.andThen
-        (\num ->
-            if num < 0 then
-                Nothing
-            else
-                Just num
-        )
-
-
-zeroIfNegative : number -> number
-zeroIfNegative =
-    max 0
-
-
 {-| Messages which the debouncer can handle.
 
 You will need to integrate this into your own `Msg` type, and then handle it

@@ -16,15 +16,21 @@ implemented debouncing, throttling, or other ways of managing inputs that occur
 over time.
 
 This is a "low-level" implementation, in the sense that it is the most general
-implementation. The other modules provide simpler, pre-configured interfaces
-for particular debouncing strategies. So, you can use the other modules if they
-suit you, leaving this module for situations that aren't handled by the others.
+implementation. You can choose:
+
+  - the type of the inputs you provide
+  - the type of the outputs you receive
+  - how you accumulate inputs to form the output
+  - the times at which outputs will be emitted
+
+For a simpler module that is focused on debouncing or throttling a `Msg`
+type, see the `Debouncer.Messages` module.
 
 To use this module, you will need to integrate it into your `Model` and `Msg`
 type, and handle it in your `update` function. Here's one example, where the
 "input" you're providing is your own `Msg` type, and the output is also your
-`Msg` type. (To avoid some of the verbosity below, you can use one of the
-more specialized modules, assuming the specialization suits you).
+`Msg` type. (To avoid some of the verbosity below, you can use the
+`Debouncer.Messages` module).
 
     type alias Model =
         { quietForOneSecond : Debouncer Msg Msg

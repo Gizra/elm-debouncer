@@ -36,29 +36,20 @@ fuzzState outputFuzzer =
 
 fuzzSimpleConfig : Fuzzer (Config i i)
 fuzzSimpleConfig =
-    Fuzz.map4 Config
-        (Fuzz.maybe fuzzInterval)
-        (Fuzz.maybe fuzzInterval)
-        fuzzInterval
-        fuzzSimpleAccumulator
+    Fuzz.map Config <|
+        Fuzz.map4 ConfigRecord
+            (Fuzz.maybe fuzzInterval)
+            (Fuzz.maybe fuzzInterval)
+            fuzzInterval
+            fuzzSimpleAccumulator
 
 
 fuzzSimpleAccumulator : Fuzzer (i -> Maybe i -> Maybe i)
 fuzzSimpleAccumulator =
     Fuzz.oneOf
-        [ Fuzz.constant copyLastInput
-        , Fuzz.constant keepFirstInput
+        [ Fuzz.constant lastInput
+        , Fuzz.constant firstInput
         ]
-
-
-copyLastInput : i -> Maybe i -> Maybe i
-copyLastInput input accum =
-    Just input
-
-
-keepFirstInput : i -> Maybe i -> Maybe i
-keepFirstInput input accum =
-    Just (Maybe.withDefault input accum)
 
 
 {-| Because we're fuzzing the config and the state separately, we could

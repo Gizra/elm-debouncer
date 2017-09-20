@@ -7,7 +7,7 @@ own `Msg` type. (You would want `Debouncer.Basic` in other cases, since
 it is more general).
 -}
 
-import Debouncer.Messages as Debouncer exposing (Debouncer, provideInput)
+import Debouncer.Messages as Debouncer exposing (Debouncer, settleWhenQuietFor, provideInput, toDebouncer)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -20,18 +20,12 @@ type alias Model =
     }
 
 
-quietForOneSecondConfig : Debouncer.Config Msg
-quietForOneSecondConfig =
-    { emitWhenUnsettled = Nothing
-    , emitWhileUnsettled = Nothing
-    , settleWhenQuietFor = 1 * Time.second
-    , accumulator = \input accum -> Just input
-    }
-
-
 init : ( Model, Cmd Msg )
 init =
-    ( { quietForOneSecond = Debouncer.init quietForOneSecondConfig
+    ( { quietForOneSecond =
+            Debouncer.config
+                |> settleWhenQuietFor (1 * Time.second)
+                |> toDebouncer
       , messages = []
       }
     , Cmd.none
@@ -43,24 +37,19 @@ type Msg
     | DoSomething
 
 
+updateDebouncer : Debouncer.UpdateConfig Msg Model
+updateDebouncer =
+    { mapMsg = MsgQuietForOneSecond
+    , getDebouncer = .quietForOneSecond
+    , setDebouncer = \debouncer model -> { model | quietForOneSecond = debouncer }
+    }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         MsgQuietForOneSecond subMsg ->
-            let
-                ( subModel, cmd, emittedMsg ) =
-                    Debouncer.update MsgQuietForOneSecond subMsg model.quietForOneSecond
-
-                updatedModel =
-                    { model | quietForOneSecond = subModel }
-            in
-                case emittedMsg of
-                    Nothing ->
-                        ( updatedModel, cmd )
-
-                    Just emitted ->
-                        update emitted updatedModel
-                            |> Tuple.mapSecond (\cmd2 -> Cmd.batch [ cmd, cmd2 ])
+            Debouncer.update update updateDebouncer subMsg model
 
         DoSomething ->
             ( { model | messages = model.messages ++ [ "I did something" ] }

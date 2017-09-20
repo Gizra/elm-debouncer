@@ -6,7 +6,7 @@ see the `Messages` example for that simplified approach. But you could use
 `Debouncer.Basics` in other cases -- it is more general.
 -}
 
-import Debouncer.Basic as Debouncer exposing (Debouncer, provideInput)
+import Debouncer.Basic as Debouncer exposing (Debouncer, provideInput, settleWhenQuietFor, toDebouncer)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -19,18 +19,12 @@ type alias Model =
     }
 
 
-quietForOneSecondConfig : Debouncer.Config Msg Msg
-quietForOneSecondConfig =
-    { emitWhenUnsettled = Nothing
-    , emitWhileUnsettled = Nothing
-    , settleWhenQuietFor = 1 * Time.second
-    , accumulator = \input accum -> Just input
-    }
-
-
 init : ( Model, Cmd Msg )
 init =
-    ( { quietForOneSecond = Debouncer.init quietForOneSecondConfig
+    ( { quietForOneSecond =
+            Debouncer.config
+                |> settleWhenQuietFor (1 * Time.second)
+                |> toDebouncer
       , messages = []
       }
     , Cmd.none

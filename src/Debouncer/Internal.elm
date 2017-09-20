@@ -13,8 +13,8 @@ asynchronous:
   - When we want to schedule a `Check`, we just return a `List Time` ... it's
     the caller's job to actually schedule it.
 
-The documentation for these types is in `Debouncer.Basic`, since that is what
-is actually exposed.
+The user-facing documentation for these types is in `Debouncer.Basic` and
+`Debouncer.Messages`, since those are the exposed modules.
 
 -}
 
@@ -26,33 +26,148 @@ type Debouncer i o
     = Debouncer (Config i o) (State o)
 
 
+{-| Cancelation is one way we can directly modify a debouncer. Basically, we
+just forget our state. There may be future `Check ...` messages coming, but
+they will consider what to do based solely on our state at that time. So,
+forgetting our state is sufficient to "cancel" any pending output.
+-}
 cancel : Debouncer i o -> Debouncer i o
 cancel (Debouncer config state) =
     Debouncer config Settled
 
 
-type alias Config i o =
+type alias Accumulator i o =
+    i -> Maybe o -> Maybe o
+
+
+lastInput : Accumulator i i
+lastInput i o =
+    Just i
+
+
+firstInput : Accumulator i i
+firstInput i =
+    Just << Maybe.withDefault i
+
+
+{-| Note that the output list will have the most recent input first.
+-}
+allInputs : Accumulator i (List i)
+allInputs i o =
+    Just (i :: Maybe.withDefault [] o)
+
+
+addInputs : Accumulator number number
+addInputs i o =
+    Just (i + Maybe.withDefault 0 o)
+
+
+appendInputToOutput : Accumulator appendable appendable
+appendInputToOutput i o =
+    Just <|
+        Maybe.withDefault i <|
+            Maybe.map (\acc -> acc ++ i) o
+
+
+appendOutputToInput : Accumulator appendable appendable
+appendOutputToInput i o =
+    Just <|
+        Maybe.withDefault i <|
+            Maybe.map (\acc -> i ++ acc) o
+
+
+{-| An opaque type representing the configuration for a debouncer.
+
+  - We provide various "constructor" functions (rather than exposing the
+    type to clients) so that we can change the type in future without
+    a major version bump.
+
+  - We require a `Config` that is separate from the `Debouncer` itself,
+    because changes to the configuration once the debouncer is actually
+    operating would need to be handled specially, via messages.
+
+-}
+type Config i o
+    = Config (ConfigRecord i o)
+
+
+type alias ConfigRecord i o =
     { emitWhenUnsettled : Maybe Time
     , emitWhileUnsettled : Maybe Time
     , settleWhenQuietFor : Time
-    , accumulator : i -> Maybe o -> Maybe o
+    , accumulator : Accumulator i o
     }
 
 
-init : Config i o -> Debouncer i o
-init config =
+{-| This is the most basic constructor for a `Config`.
+
+By default, it:
+
+  - settles when quiet for 1 second
+  - does not emit when unsettled
+  - does not emit while unsettled
+  - emits the last input
+
+To change any of those parameters, use the various functions
+that alter a `Config`.
+
+So, by default, the output type is the same as the input type. However,
+you can change that by using the `accumulateWith` function to provide
+a different accumulator.
+
+-}
+config : Config i i
+config =
+    Config
+        { emitWhenUnsettled = Nothing
+        , emitWhileUnsettled = Nothing
+        , settleWhenQuietFor = 1 * Time.second
+        , accumulator = lastInput
+        }
+
+
+emitWhenUnsettled : Maybe Time -> Config i o -> Config i o
+emitWhenUnsettled time (Config config) =
+    Config
+        { config | emitWhenUnsettled = time }
+
+
+emitWhileUnsettled : Maybe Time -> Config i o -> Config i o
+emitWhileUnsettled time (Config config) =
+    Config
+        { config | emitWhileUnsettled = time }
+
+
+settleWhenQuietFor : Time -> Config i o -> Config i o
+settleWhenQuietFor time (Config config) =
+    Config
+        { config | settleWhenQuietFor = time }
+
+
+{-| Note that this changes the type of the `Config` to match the
+type of the acummulator provided.
+-}
+accumulateWith : Accumulator i o -> Config a b -> Config i o
+accumulateWith accumulator (Config config) =
+    Config
+        { config | accumulator = accumulator }
+
+
+toDebouncer : Config i o -> Debouncer i o
+toDebouncer config =
     Debouncer (sanitizeConfig config) Settled
 
 
 {-| Sanitize the config to simplify some of the logic.
 -}
 sanitizeConfig : Config i o -> Config i o
-sanitizeConfig config =
-    { emitWhenUnsettled = nothingIfNegative config.emitWhenUnsettled
-    , emitWhileUnsettled = nothingIfNegative config.emitWhileUnsettled
-    , settleWhenQuietFor = zeroIfNegative config.settleWhenQuietFor
-    , accumulator = config.accumulator
-    }
+sanitizeConfig (Config config) =
+    Config
+        { emitWhenUnsettled = nothingIfNegative config.emitWhenUnsettled
+        , emitWhileUnsettled = nothingIfNegative config.emitWhileUnsettled
+        , settleWhenQuietFor = zeroIfNegative config.settleWhenQuietFor
+        , accumulator = config.accumulator
+        }
 
 
 nothingIfNegative : Maybe number -> Maybe number
@@ -100,7 +215,7 @@ testability (since we can test whether that list is correct). The caller is
 responsible for actually turning that list into commands.
 -}
 update : Msg i -> Debouncer i o -> ( Debouncer i o, List Time, Maybe o )
-update msg ((Debouncer config state) as debouncer) =
+update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
     case msg of
         InputProvidedAt input time ->
             let
@@ -122,7 +237,7 @@ update msg ((Debouncer config state) as debouncer) =
                                 }
 
                 newDebouncer =
-                    Debouncer config newState
+                    Debouncer wrappedConfig newState
 
                 checks =
                     case state of
@@ -296,7 +411,7 @@ update msg ((Debouncer config state) as debouncer) =
                             else
                                 []
                     in
-                        ( Debouncer config newState
+                        ( Debouncer wrappedConfig newState
                         , intervals
                         , emit
                         )

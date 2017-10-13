@@ -1,20 +1,26 @@
 module Debouncer.Messages
     exposing
-        ( accumulateWith
-        , cancel
-        , config
-        , Debouncer
+        ( Debouncer
         , DebouncerConfig
+        , Msg
+        , UpdateConfig
+        , accumulateWith
+        , cancel
+        , cancelNow
+        , debounce
+        , emitFirstInput
+        , emitNow
         , emitWhenUnsettled
         , emitWhileUnsettled
         , firstInput
         , lastInput
-        , Msg
+        , manual
         , provideInput
+        , settleNow
         , settleWhenQuietFor
+        , throttle
         , toDebouncer
         , update
-        , UpdateConfig
         )
 
 {-| Ths module allows you to "smooth out" messages over time, so that they
@@ -114,8 +120,8 @@ here.
 
 ## Creating a configuration
 
-@docs config
-@docs settleWhenQuietFor, emitWhenUnsettled, emitWhileUnsettled
+@docs manual, debounce, throttle
+@docs settleWhenQuietFor, emitWhenUnsettled, emitFirstInput, emitWhileUnsettled
 @docs accumulateWith, lastInput, firstInput
 
 @docs Debouncer, Config, toDebouncer
@@ -123,7 +129,7 @@ here.
 
 ## Running a debouncer
 
-@docs Msg, provideInput, cancel, UpdateConfig, update
+@docs Msg, provideInput, emitNow, settleNow, cancel, cancelNow, UpdateConfig, update
 
 -}
 
@@ -170,21 +176,66 @@ type alias DebouncerConfig msg =
     Debouncer.Basic.Config msg msg
 
 
-{-| A starting point for configuring a debouncer. By default, it:
+{-| A starting point for configuring a debouncer that only emits when you tell
+it to, via `emitNow`.
 
-  - settles when quiet for 1 second
-  - emits the last input when it becomes settled
+By default, it:
+
+  - never settles
   - does not emit when it becomes unsettled
   - does not emit while unsettled
+  - accumulates only the last input
 
-So, this amounts to "debouncing" by default (as opposed to "throttling").
+So, without more, you would need to tell this debouncer when to emit something
+(via `emitNow`) -- it would never happen automatically.
+
 To change any of those parameters, use the various functions that alter a
-`Config`.
+`Config` (i.e. `settleWhenQuietFor`, `emitWhenUnsettled`, `emitWhileUnsettled`).
+
+By default, the output type is the same as the input type. However, you can
+change that by using the `accumulateWith` function to provide a different
+accumulator.
 
 -}
-config : DebouncerConfig msg
-config =
-    Debouncer.Basic.config
+manual : DebouncerConfig msg
+manual =
+    Debouncer.Basic.manual
+
+
+{-| A starting point for a configuring a debouncer which **debounces**--
+that is, which will emit once quiet for the time you specify.
+
+So, `debounce (2 * Time.second)` is equivalent to
+
+    manual
+        |> settleWhenQuietFor (Just (2 * Time.second))
+
+If you also want to emit using the first input, then you can use
+`emitWhenSettled`. For instance, the following configuration would emit the
+first input immediately when becoming unsettled, and then emit any
+subsequent input once the debouncer was quiet for 2 seconds.
+
+    debounce (2 * Time.second)
+        |> emitWhenUnsettled (Just 0)
+-}
+debounce : Time -> DebouncerConfig msg
+debounce =
+    Debouncer.Basic.debounce
+
+
+{-| A starting point for configuring a debouncer which throttles -- that is,
+which will emit the first input immediately, and then accmulate and
+emit no more often than the specified interval.
+
+So, `throttle (2 * Time.second)` is equivalent to
+
+    manual
+        |> emitWhileUnsettled (Just (2 * Time.second))
+        |> emitWhenUnsettled (Just 0)
+-}
+throttle : Time -> DebouncerConfig msg
+throttle =
+    Debouncer.Basic.throttle
 
 
 {-| What should the debouncer do with the first input when it becomes unsettled?
@@ -205,6 +256,26 @@ eventually emitting it.
 emitWhenUnsettled : Maybe Time -> DebouncerConfig msg -> DebouncerConfig msg
 emitWhenUnsettled =
     Debouncer.Basic.emitWhenUnsettled
+
+
+{-| Modify a `Config` by controlling whether to emit the first
+input when becoming unsettled.
+
+`emitFirstInput True config` is equivalent to
+
+    emitWhenUnsettled (Just 0) config
+
+`emitFirstInput False config` is equivalent to
+
+    emitWhenUnsettled Nothing config
+
+For more complex cases, where you want to emit the first input on
+a different interval than others, but not immediately, you can
+use `emitWhenSettled` directly.
+-}
+emitFirstInput : Bool -> DebouncerConfig msg -> DebouncerConfig msg
+emitFirstInput =
+    Debouncer.Basic.emitFirstInput
 
 
 {-| Should the debouncer emit while it is unsettled?
@@ -233,7 +304,7 @@ parameter won't make much difference, unless you are also specifying
 emitWhenUnsettled` in order to do something with the initial input.
 
 -}
-settleWhenQuietFor : Time -> DebouncerConfig msg -> DebouncerConfig msg
+settleWhenQuietFor : Maybe Time -> DebouncerConfig msg -> DebouncerConfig msg
 settleWhenQuietFor =
     Debouncer.Basic.settleWhenQuietFor
 
@@ -313,6 +384,17 @@ provideInput =
     Debouncer.Basic.provideInput
 
 
+{-| Construct a message which settles the debouncer now, even if it wouldn't
+otherwise settle at this time.
+
+Any accumulated output will be emitted. If you want to settle without emitting
+any output, use `cancel` or `cancelNow` instead.
+-}
+settleNow : Msg msg
+settleNow =
+    Debouncer.Basic.settleNow
+
+
 {-| Cancel any input collected so far (and not yet emitted). This throws away
 whatever input has been provided in the past, and forces the debouncer back to
 a "settled" state (without emitting anything).
@@ -320,6 +402,24 @@ a "settled" state (without emitting anything).
 cancel : Debouncer msg -> Debouncer msg
 cancel =
     Debouncer.Basic.cancel
+
+
+{-| Like `cancel`, but operates via a message instead of acting directly on
+the debouncer. This is a convenience for cases where you'd like to cancel
+via a message.
+-}
+cancelNow : Msg msg
+cancelNow =
+    Debouncer.Basic.cancelNow
+
+
+{-| Construct a message which will emit any accumulated output. This doesn't
+affect whether the debouncer is "settled" or not. If you'd like to emit output
+and force the debouncer to be settled, then use `settleNow` instead.
+-}
+emitNow : Msg msg
+emitNow =
+    Debouncer.Basic.emitNow
 
 
 {-| Configuration that simplifies how your `update` function calls our `update`

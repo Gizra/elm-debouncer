@@ -1,22 +1,28 @@
 module Debouncer.Basic
     exposing
         ( Accumulator
+        , Config
+        , Debouncer
+        , Msg
         , accumulateWith
         , addInputs
         , allInputs
         , appendInputToOutput
         , appendOutputToInput
         , cancel
-        , Config
-        , config
-        , Debouncer
+        , cancelNow
+        , debounce
+        , emitFirstInput
+        , emitNow
         , emitWhenUnsettled
         , emitWhileUnsettled
         , firstInput
         , lastInput
-        , Msg
+        , manual
         , provideInput
+        , settleNow
         , settleWhenQuietFor
+        , throttle
         , toDebouncer
         , update
         )
@@ -63,8 +69,7 @@ type, and handle it in your `update` function. Here's one example, where the
     init : ( Model, Cmd Msg )
     init =
         ( { quietForOneSecond =
-                Debouncer.config
-                    |> settleWhenQuietFor (1 * Time.second)
+                Debouncer.debounce (1 * Time.second)
                     |> toDebouncer
           , messages = []
           }
@@ -138,8 +143,8 @@ you can do something quite different from this example if you like.
 
 ## Creating a configuration
 
-@docs config
-@docs settleWhenQuietFor, emitWhenUnsettled, emitWhileUnsettled
+@docs manual, debounce, throttle
+@docs settleWhenQuietFor, emitWhenUnsettled, emitFirstInput, emitWhileUnsettled
 @docs Accumulator, accumulateWith
 
 
@@ -150,7 +155,7 @@ you can do something quite different from this example if you like.
 
 ## Running a debouncer
 
-@docs Msg, provideInput, cancel, update
+@docs Msg, provideInput, emitNow, settleNow, cancel, cancelNow, update
 
 -}
 
@@ -178,11 +183,21 @@ back. However, you're not limited to that -- you can get a different type back
 if you like. (You just have to provide an `Accmulator` function to accumulate
 your inputs into an output).
 
-To create a `Debouncer`, start with a `config`, modify the config as needed,
-and then use `toDebouncer`. For instance:
+To create a `Debouncer`:
 
-    config
-        |> settleWhenQuietFor (0.5 * Time.second)
+- start with `manual`, `debounce` or `throttle`
+- modify the config as needed,
+- use `toDebouncer`
+
+For instance:
+
+    manual
+        |> settleWhenQuietFor (Just (0.5 * Time.second))
+        |> toDebouncer
+
+... or, the equivalent:
+
+    debounce (0.5 * Time.second)
         |> toDebouncer
 
 -}
@@ -255,12 +270,17 @@ appendOutputToInput =
 
 {-| An opaque type representing the configuration needed for a debouncer.
 
-To create a debouncer, start with `config`, modify it as needed, and then
-use `toDebouncer`. For instance:
+To create a debouncer:
 
-    config
-        |> settleWhenQuietFor (2.0 * Time.second)
-        |> emitWhileUnsettled (0.5 * Time.second)
+- start with `manual`, `debounce` or `throttle`
+- modify it as needed
+- `toDebouncer`.
+
+For instance:
+
+    manual
+        |> settleWhenQuietFor (Just (2.0 * Time.second))
+        |> emitWhileUnsettled (Just (0.5 * Time.second))
         |> toDebouncer
 
 -}
@@ -268,25 +288,68 @@ type alias Config i o =
     Debouncer.Internal.Config i o
 
 
-{-| A starting point for configuring a debouncer. By default, it:
+{-| A starting point for configuring a debouncer that only emits when you tell
+it to, via `emitNow`.
 
-  - settles when quiet for 1 second
-  - emits the last input when it becomes settled
+By default, it:
+
+  - never settles
   - does not emit when it becomes unsettled
   - does not emit while unsettled
+  - accumulates only the last input
 
-So, this amounts to "debouncing" by default (as opposed to "throttling").
+So, without more, you would need to tell this debouncer when to emit something
+(via `emitNow`) -- it would never happen automatically.
+
 To change any of those parameters, use the various functions that alter a
-`Config`.
+`Config` (i.e. `settleWhenQuietFor`, `emitWhenUnsettled`, `emitWhileUnsettled`).
 
-By default, the output type is the same as the input type. However,
-you can change that by using the `accumulateWith` function to provide
-a different accumulator.
+By default, the output type is the same as the input type. However, you can
+change that by using the `accumulateWith` function to provide a different
+accumulator.
 
 -}
-config : Config i i
-config =
-    Debouncer.Internal.config
+manual : Config i i
+manual =
+    Debouncer.Internal.manual
+
+
+{-| A starting point for a configuring a debouncer which **debounces**--
+that is, which will emit once quiet for the time you specify.
+
+So, `debounce (2 * Time.second)` is equivalent to
+
+    manual
+        |> settleWhenQuietFor (Just (2 * Time.second))
+
+If you also want to emit using the first input, then you can use
+`emitWhenSettled`. For instance, the following configuration would emit the
+first input immediately when becoming unsettled, and then emit any
+subsequent input once the debouncer was quiet for 2 seconds.
+
+    debounce (2 * Time.second)
+        |> emitWhenUnsettled (Just 0)
+-}
+debounce : Time -> Config i i
+debounce interval =
+    settleWhenQuietFor (Just interval) manual
+
+
+{-| A starting point for configuring a debouncer which throttles -- that is,
+which will emit the first input immediately, and then accmulate and
+emit no more often than the specified interval.
+
+So, `throttle (2 * Time.second)` is equivalent to
+
+    manual
+        |> emitWhileUnsettled (Just (2 * Time.second))
+        |> emitWhenUnsettled (Just 0)
+-}
+throttle : Time -> Config i i
+throttle interval =
+    manual
+        |> emitWhileUnsettled (Just interval)
+        |> emitWhenUnsettled (Just 0)
 
 
 {-| Should the debouncer do something special when it becomes unsettled?
@@ -308,6 +371,26 @@ eventually emitting it.
 emitWhenUnsettled : Maybe Time -> Config i o -> Config i o
 emitWhenUnsettled =
     Debouncer.Internal.emitWhenUnsettled
+
+
+{-| Modify a `Config` by controlling whether to emit the first
+input when becoming unsettled.
+
+`emitFirstInput True config` is equivalent to
+
+    emitWhenUnsettled (Just 0) config
+
+`emitFirstInput False config` is equivalent to
+
+    emitWhenUnsettled Nothing config
+
+For more complex cases, where you want to emit the first input on
+a different interval than others, but not immediately, you can
+use `emitWhenSettled` directly.
+-}
+emitFirstInput : Bool -> Config i o -> Config i o
+emitFirstInput =
+    Debouncer.Internal.emitFirstInput
 
 
 {-| Should the debouncer emit while it is unsettled?
@@ -336,7 +419,7 @@ parameter won't make much difference, unless you are also specifying
 emitWhenUnsettled` in order to do something with the initial input.
 
 -}
-settleWhenQuietFor : Time -> Config i o -> Config i o
+settleWhenQuietFor : Maybe Time -> Config i o -> Config i o
 settleWhenQuietFor =
     Debouncer.Internal.settleWhenQuietFor
 
@@ -385,6 +468,9 @@ in your `update` function (see code example above).
 The type parameter represents the type of the input to be provided to
 the debouncer. Thus, it should match the `i` in `Debouncer i o`.
 
+You can construct a message with `provideInput`, `emitNow`, `cancelNow`, or
+`settleNow`.
+
 The only message you will typically need to send to the debouncer explicitly
 is the message that provides input. You can construct such a message with the
 `provideInput` function. Other messages are used internally by the debouncer.
@@ -392,6 +478,7 @@ is the message that provides input. You can construct such a message with the
 -}
 type Msg i
     = ProvideInput i
+    | EmitNow
     | MsgInternal (Debouncer.Internal.Msg i)
 
 
@@ -407,6 +494,17 @@ provideInput =
     ProvideInput
 
 
+{-| Construct a message which settles the debouncer now, even if it wouldn't
+otherwise settle at this time.
+
+Any accumulated output will be emitted. If you want to settle without emitting
+any output, use `cancel` or `cancelNow` instead.
+-}
+settleNow : Msg i
+settleNow =
+    MsgInternal Debouncer.Internal.ManualSettle
+
+
 {-| Cancel any input collected so far (and not yet emitted). This throws away
 whatever input has been provided in the past, and forces the debouncer back to
 a "settled" state (without emitting anything).
@@ -414,6 +512,24 @@ a "settled" state (without emitting anything).
 cancel : Debouncer i o -> Debouncer i o
 cancel =
     Debouncer.Internal.cancel
+
+
+{-| Like `cancel`, but operates via a message instead of acting directly on
+the debouncer. This is a convenience for cases where you'd like to cancel
+via a message.
+-}
+cancelNow : Msg i
+cancelNow =
+    MsgInternal Debouncer.Internal.ManualCancel
+
+
+{-| Construct a message which will emit any accumulated output. This doesn't
+affect whether the debouncer is "settled" or not. If you'd like to emit output
+and force the debouncer to be settled, then use `settleNow` instead.
+-}
+emitNow : Msg i
+emitNow =
+    EmitNow
 
 
 {-| Handle a message for the debouncer.
@@ -437,6 +553,14 @@ update msg debouncer =
             -- input and the time to our internal "update" function.
             ( debouncer
             , Task.perform (MsgInternal << Debouncer.Internal.InputProvidedAt input) Time.now
+            , Nothing
+            )
+
+        EmitNow ->
+            -- Just gets the current time, and then hands the message to our
+            -- internal update function.
+            ( debouncer
+            , Task.perform (MsgInternal << Debouncer.Internal.ManualEmitAt) Time.now
             , Nothing
             )
 

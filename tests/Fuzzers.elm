@@ -40,7 +40,7 @@ fuzzSimpleConfig =
         Fuzz.map4 ConfigRecord
             (Fuzz.maybe fuzzInterval)
             (Fuzz.maybe fuzzInterval)
-            fuzzInterval
+            (Fuzz.maybe fuzzInterval)
             fuzzSimpleAccumulator
 
 

@@ -124,8 +124,6 @@ here.
 @docs settleWhenQuietFor, emitWhenUnsettled, emitFirstInput, emitWhileUnsettled
 @docs accumulateWith, lastInput, firstInput
 
-@docs Debouncer, Config, toDebouncer
-
 
 ## Running a debouncer
 

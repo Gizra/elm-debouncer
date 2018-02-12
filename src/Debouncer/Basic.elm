@@ -444,7 +444,7 @@ The `o` will be `Nothing` if this is the first input since the debouncer
 has become unsettled.
 
 -}
-accumulateWith : Accumulator i o -> Config i o -> Config i o
+accumulateWith : Accumulator i o -> Config a b -> Config i o
 accumulateWith =
     Debouncer.Internal.accumulateWith
 

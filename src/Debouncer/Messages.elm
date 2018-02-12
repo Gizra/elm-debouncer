@@ -323,7 +323,7 @@ of the form
     msg -> Maybe msg -> Maybe msg
 
 -}
-accumulateWith : Accumulator msg msg -> DebouncerConfig msg -> DebouncerConfig msg
+accumulateWith : Accumulator msg msg -> DebouncerConfig a -> DebouncerConfig msg
 accumulateWith =
     Debouncer.Basic.accumulateWith
 

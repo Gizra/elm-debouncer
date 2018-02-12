@@ -94,13 +94,13 @@ type, and handle it in your `update` function. Here's one example, where the
                     updatedModel =
                         { model | quietForOneSecond = subModel }
                 in
-                    case emittedMsg of
-                        Just emitted ->
-                            update emitted updatedModel
-                                |> Tuple.mapSecond (\cmd -> Cmd.batch [ cmd, mappedCmd ])
+                case emittedMsg of
+                    Just emitted ->
+                        update emitted updatedModel
+                            |> Tuple.mapSecond (\cmd -> Cmd.batch [ cmd, mappedCmd ])
 
-                        Nothing ->
-                            ( updatedModel, mappedCmd )
+                    Nothing ->
+                        ( updatedModel, mappedCmd )
 
             DoSomething ->
                 ( { model | messages = model.messages ++ [ "I did something" ] }
@@ -161,10 +161,10 @@ you can do something quite different from this example if you like.
 
 import Debouncer.Internal
 import List.Extra
-import Process
-import Time exposing (Time, second)
-import Task
 import Maybe
+import Process
+import Task
+import Time exposing (Time, second)
 import Tuple
 
 
@@ -185,9 +185,9 @@ your inputs into an output).
 
 To create a `Debouncer`:
 
-- start with `manual`, `debounce` or `throttle`
-- modify the config as needed,
-- use `toDebouncer`
+  - start with `manual`, `debounce` or `throttle`
+  - modify the config as needed,
+  - use `toDebouncer`
 
 For instance:
 
@@ -272,9 +272,9 @@ appendOutputToInput =
 
 To create a debouncer:
 
-- start with `manual`, `debounce` or `throttle`
-- modify it as needed
-- `toDebouncer`.
+  - start with `manual`, `debounce` or `throttle`
+  - modify it as needed
+  - `toDebouncer`.
 
 For instance:
 
@@ -329,6 +329,7 @@ subsequent input once the debouncer was quiet for 2 seconds.
 
     debounce (2 * Time.second)
         |> emitWhenUnsettled (Just 0)
+
 -}
 debounce : Time -> Config i i
 debounce interval =
@@ -344,6 +345,7 @@ So, `throttle (2 * Time.second)` is equivalent to
     manual
         |> emitWhileUnsettled (Just (2 * Time.second))
         |> emitWhenUnsettled (Just 0)
+
 -}
 throttle : Time -> Config i i
 throttle interval =
@@ -387,6 +389,7 @@ input when becoming unsettled.
 For more complex cases, where you want to emit the first input on
 a different interval than others, but not immediately, you can
 use `emitWhenSettled` directly.
+
 -}
 emitFirstInput : Bool -> Config i o -> Config i o
 emitFirstInput =
@@ -499,6 +502,7 @@ otherwise settle at this time.
 
 Any accumulated output will be emitted. If you want to settle without emitting
 any output, use `cancel` or `cancelNow` instead.
+
 -}
 settleNow : Msg i
 settleNow =
@@ -585,7 +589,7 @@ update msg debouncer =
                             )
                         |> Cmd.batch
             in
-                ( updatedDebouncer
-                , cmds
-                , output
-                )
+            ( updatedDebouncer
+            , cmds
+            , output
+            )

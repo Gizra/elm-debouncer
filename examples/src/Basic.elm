@@ -50,13 +50,13 @@ update msg model =
                 updatedModel =
                     { model | quietForOneSecond = subModel }
             in
-                case emittedMsg of
-                    Just emitted ->
-                        update emitted updatedModel
-                            |> Tuple.mapSecond (\cmd -> Cmd.batch [ cmd, mappedCmd ])
+            case emittedMsg of
+                Just emitted ->
+                    update emitted updatedModel
+                        |> Tuple.mapSecond (\cmd -> Cmd.batch [ cmd, mappedCmd ])
 
-                    Nothing ->
-                        ( updatedModel, mappedCmd )
+                Nothing ->
+                    ( updatedModel, mappedCmd )
 
         DoSomething ->
             ( { model | messages = model.messages ++ [ "I did something" ] }

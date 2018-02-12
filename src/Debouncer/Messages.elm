@@ -43,7 +43,7 @@ type, and handle it in your `update` function. Here's one example -- it's the
 same example as given in `Debouncer.Basic`, but you can see that it's simpler
 here.
 
-    import Debouncer.Messages as Debouncer exposing (Debouncer, settleWhenQuietFor, provideInput, toDebouncer)
+    import Debouncer.Messages as Debouncer exposing (Debouncer, provideInput, settleWhenQuietFor, toDebouncer)
     import Html exposing (..)
     import Html.Attributes exposing (..)
     import Html.Events exposing (..)
@@ -135,10 +135,10 @@ here.
 
 import Debouncer.Basic exposing (Accumulator)
 import List.Extra
-import Process
-import Time exposing (Time, second)
-import Task
 import Maybe
+import Process
+import Task
+import Time exposing (Time, second)
 import Tuple
 
 
@@ -217,6 +217,7 @@ subsequent input once the debouncer was quiet for 2 seconds.
 
     debounce (2 * Time.second)
         |> emitWhenUnsettled (Just 0)
+
 -}
 debounce : Time -> DebouncerConfig msg
 debounce =
@@ -232,6 +233,7 @@ So, `throttle (2 * Time.second)` is equivalent to
     manual
         |> emitWhileUnsettled (Just (2 * Time.second))
         |> emitWhenUnsettled (Just 0)
+
 -}
 throttle : Time -> DebouncerConfig msg
 throttle =
@@ -272,6 +274,7 @@ input when becoming unsettled.
 For more complex cases, where you want to emit the first input on
 a different interval than others, but not immediately, you can
 use `emitWhenSettled` directly.
+
 -}
 emitFirstInput : Bool -> DebouncerConfig msg -> DebouncerConfig msg
 emitFirstInput =
@@ -389,6 +392,7 @@ otherwise settle at this time.
 
 Any accumulated output will be emitted. If you want to settle without emitting
 any output, use `cancel` or `cancelNow` instead.
+
 -}
 settleNow : Msg msg
 settleNow =
@@ -500,11 +504,11 @@ update parentUpdate config msg model =
         newModel =
             config.setDebouncer updatedDebouncer model
     in
-        output
-            |> Maybe.map
-                (\emittedMsg ->
-                    parentUpdate emittedMsg newModel
-                        |> Tuple.mapSecond (\recursiveCmd -> Cmd.batch [ mappedCmd, recursiveCmd ])
-                )
-            |> Maybe.withDefault
-                ( newModel, mappedCmd )
+    output
+        |> Maybe.map
+            (\emittedMsg ->
+                parentUpdate emittedMsg newModel
+                    |> Tuple.mapSecond (\recursiveCmd -> Cmd.batch [ mappedCmd, recursiveCmd ])
+            )
+        |> Maybe.withDefault
+            ( newModel, mappedCmd )

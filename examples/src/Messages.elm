@@ -7,7 +7,7 @@ own `Msg` type. (You would want `Debouncer.Basic` in other cases, since
 it is more general).
 -}
 
-import Debouncer.Messages as Debouncer exposing (Debouncer, settleWhenQuietFor, provideInput, toDebouncer)
+import Debouncer.Messages as Debouncer exposing (Debouncer, provideInput, settleWhenQuietFor, toDebouncer)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)

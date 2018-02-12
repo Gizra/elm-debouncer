@@ -23,8 +23,8 @@ type alias Model =
 init : ( Model, Cmd Msg )
 init =
     ( { quietForOneSecond =
-            Debouncer.config
-                |> settleWhenQuietFor (1 * Time.second)
+            Debouncer.manual
+                |> settleWhenQuietFor (Just <| 1 * Time.second)
                 |> toDebouncer
       , messages = []
       }

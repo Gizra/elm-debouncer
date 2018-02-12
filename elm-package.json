@@ -10,7 +10,7 @@
         "Debouncer.Basic"
     ],
     "dependencies": {
-        "elm-community/list-extra": "6.1.0 <= v < 7.0.0",
+        "elm-community/list-extra": "6.1.0 <= v < 8.0.0",
         "elm-lang/core": "5.0.0 <= v < 6.0.0"
     },
     "elm-version": "0.18.0 <= v < 0.19.0"

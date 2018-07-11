@@ -5,6 +5,12 @@ import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, int, list, string)
 import Fuzzers exposing (..)
 import Test exposing (..)
+import Time exposing (second)
+
+
+expectEmitted : c -> ( a, b, Maybe c ) -> Expectation
+expectEmitted expected ( state, times, emitted ) =
+    Expect.equal (Just expected) emitted
 
 
 testCancel : Test
@@ -19,3 +25,15 @@ testCancel =
                         Expect.equal emitted Nothing
                    )
         )
+
+
+testThrottle : Test
+testThrottle =
+    describe "throttle"
+        [ test "Always emits first input" <|
+            \_ ->
+                throttle (3 * second)
+                    |> toDebouncer
+                    |> update (InputProvidedAt 1 2000)
+                    |> expectEmitted 1
+        ]

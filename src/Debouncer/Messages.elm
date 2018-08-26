@@ -1,27 +1,11 @@
-module Debouncer.Messages
-    exposing
-        ( Debouncer
-        , DebouncerConfig
-        , Msg
-        , UpdateConfig
-        , accumulateWith
-        , cancel
-        , cancelNow
-        , debounce
-        , emitFirstInput
-        , emitNow
-        , emitWhenUnsettled
-        , emitWhileUnsettled
-        , firstInput
-        , lastInput
-        , manual
-        , provideInput
-        , settleNow
-        , settleWhenQuietFor
-        , throttle
-        , toDebouncer
-        , update
-        )
+module Debouncer.Messages exposing
+    ( Debouncer, DebouncerConfig, toDebouncer
+    , manual, debounce, throttle
+    , settleWhenQuietFor, emitWhenUnsettled, emitFirstInput, emitWhileUnsettled
+    , accumulateWith, lastInput, firstInput
+    , Msg, provideInput, emitNow, settleNow, cancel, cancelNow, UpdateConfig, update
+    , Milliseconds
+    )
 
 {-| Ths module allows you to "smooth out" messages over time, so that they
 don't get applied immediately -- instead, they are applied at a future moment.
@@ -89,7 +73,7 @@ here.
 
     view : Model -> Html Msg
     view model =
-        div [ style [ ( "margin", "1em" ) ] ]
+        div [ style "margin" "1em" ]
             [ button
                 [ DoSomething
                     |> provideInput
@@ -136,7 +120,7 @@ import List.Extra
 import Maybe
 import Process
 import Task
-import Time exposing (Time, second)
+import Time exposing (posixToMillis)
 import Tuple
 
 
@@ -157,6 +141,12 @@ and then use `toDebouncer`. For instance:
 -}
 type alias Debouncer msg =
     Debouncer.Basic.Debouncer msg msg
+
+
+{-| This is a handy type alias to note that we work in millisecond intervals.
+-}
+type alias Milliseconds =
+    Int
 
 
 {-| An opaque type representing the configuration needed for a debouncer.
@@ -217,7 +207,7 @@ subsequent input once the debouncer was quiet for 2 seconds.
         |> emitWhenUnsettled (Just 0)
 
 -}
-debounce : Time -> DebouncerConfig msg
+debounce : Milliseconds -> DebouncerConfig msg
 debounce =
     Debouncer.Basic.debounce
 
@@ -233,7 +223,7 @@ So, `throttle (2 * Time.second)` is equivalent to
         |> emitWhenUnsettled (Just 0)
 
 -}
-throttle : Time -> DebouncerConfig msg
+throttle : Milliseconds -> DebouncerConfig msg
 throttle =
     Debouncer.Basic.throttle
 
@@ -253,7 +243,7 @@ becoming unsettled. It will then remain unsettled, collecting further input and
 eventually emitting it.
 
 -}
-emitWhenUnsettled : Maybe Time -> DebouncerConfig msg -> DebouncerConfig msg
+emitWhenUnsettled : Maybe Milliseconds -> DebouncerConfig msg -> DebouncerConfig msg
 emitWhenUnsettled =
     Debouncer.Basic.emitWhenUnsettled
 
@@ -288,7 +278,7 @@ If `Just interval`, the debouncer will emit at the provided interval while it
 is unsettled. This is what you might refer to as "throttling".
 
 -}
-emitWhileUnsettled : Maybe Time -> DebouncerConfig msg -> DebouncerConfig msg
+emitWhileUnsettled : Maybe Milliseconds -> DebouncerConfig msg -> DebouncerConfig msg
 emitWhileUnsettled =
     Debouncer.Basic.emitWhileUnsettled
 
@@ -305,7 +295,7 @@ parameter won't make much difference, unless you are also specifying
 emitWhenUnsettled` in order to do something with the initial input.
 
 -}
-settleWhenQuietFor : Maybe Time -> DebouncerConfig msg -> DebouncerConfig msg
+settleWhenQuietFor : Maybe Milliseconds -> DebouncerConfig msg -> DebouncerConfig msg
 settleWhenQuietFor =
     Debouncer.Basic.settleWhenQuietFor
 

@@ -1,31 +1,12 @@
-module Debouncer.Basic
-    exposing
-        ( Accumulator
-        , Config
-        , Debouncer
-        , Msg
-        , accumulateWith
-        , addInputs
-        , allInputs
-        , appendInputToOutput
-        , appendOutputToInput
-        , cancel
-        , cancelNow
-        , debounce
-        , emitFirstInput
-        , emitNow
-        , emitWhenUnsettled
-        , emitWhileUnsettled
-        , firstInput
-        , lastInput
-        , manual
-        , provideInput
-        , settleNow
-        , settleWhenQuietFor
-        , throttle
-        , toDebouncer
-        , update
-        )
+module Debouncer.Basic exposing
+    ( Debouncer, Config, toDebouncer
+    , manual, debounce, throttle
+    , Milliseconds
+    , settleWhenQuietFor, emitWhenUnsettled, emitFirstInput, emitWhileUnsettled
+    , Accumulator, accumulateWith
+    , lastInput, firstInput, allInputs, addInputs, appendInputToOutput, appendOutputToInput
+    , Msg, provideInput, emitNow, settleNow, cancel, cancelNow, update
+    )
 
 {-| Ths module allows you to managing inputs that occur over time, so that they
 get handed back to you, at future moments, grouped in a way that you have
@@ -109,7 +90,7 @@ type, and handle it in your `update` function. Here's one example, where the
 
     view : Model -> Html Msg
     view model =
-        div [ style [ ( "margin", "1em" ) ] ]
+        div [ style "margin" "1em" ]
             [ button
                 [ DoSomething
                     |> provideInput
@@ -144,6 +125,7 @@ you can do something quite different from this example if you like.
 ## Creating a configuration
 
 @docs manual, debounce, throttle
+@docs Milliseconds
 @docs settleWhenQuietFor, emitWhenUnsettled, emitFirstInput, emitWhileUnsettled
 @docs Accumulator, accumulateWith
 
@@ -164,7 +146,7 @@ import List.Extra
 import Maybe
 import Process
 import Task
-import Time exposing (Time, second)
+import Time exposing (posixToMillis)
 import Tuple
 
 
@@ -203,6 +185,12 @@ For instance:
 -}
 type alias Debouncer i o =
     Debouncer.Internal.Debouncer i o
+
+
+{-| This is a handy type alias to note that we work in millisecond intervals.
+-}
+type alias Milliseconds =
+    Int
 
 
 {-| A function with the signature `i -> Maybe o -> Maybe o`.
@@ -331,7 +319,7 @@ subsequent input once the debouncer was quiet for 2 seconds.
         |> emitWhenUnsettled (Just 0)
 
 -}
-debounce : Time -> Config i i
+debounce : Milliseconds -> Config i i
 debounce interval =
     settleWhenQuietFor (Just interval) manual
 
@@ -347,7 +335,7 @@ So, `throttle (2 * Time.second)` is equivalent to
         |> emitWhenUnsettled (Just 0)
 
 -}
-throttle : Time -> Config i i
+throttle : Milliseconds -> Config i i
 throttle interval =
     manual
         |> emitWhileUnsettled (Just interval)
@@ -370,7 +358,7 @@ becoming unsettled. It will then remain unsettled, collecting further input and
 eventually emitting it.
 
 -}
-emitWhenUnsettled : Maybe Time -> Config i o -> Config i o
+emitWhenUnsettled : Maybe Milliseconds -> Config i o -> Config i o
 emitWhenUnsettled =
     Debouncer.Internal.emitWhenUnsettled
 
@@ -405,7 +393,7 @@ If `Just interval`, the debouncer will emit at the provided interval while it
 is unsettled. This is what you might refer to as "throttling".
 
 -}
-emitWhileUnsettled : Maybe Time -> Config i o -> Config i o
+emitWhileUnsettled : Maybe Milliseconds -> Config i o -> Config i o
 emitWhileUnsettled =
     Debouncer.Internal.emitWhileUnsettled
 
@@ -422,7 +410,7 @@ parameter won't make much difference, unless you are also specifying
 emitWhenUnsettled` in order to do something with the initial input.
 
 -}
-settleWhenQuietFor : Maybe Time -> Config i o -> Config i o
+settleWhenQuietFor : Maybe Milliseconds -> Config i o -> Config i o
 settleWhenQuietFor =
     Debouncer.Internal.settleWhenQuietFor
 
@@ -556,7 +544,9 @@ update msg debouncer =
             -- Basically, this just gets the current time, and then hands the
             -- input and the time to our internal "update" function.
             ( debouncer
-            , Task.perform (MsgInternal << Debouncer.Internal.InputProvidedAt input) Time.now
+            , Task.perform
+                (MsgInternal << Debouncer.Internal.InputProvidedAt input << posixToMillis)
+                Time.now
             , Nothing
             )
 
@@ -564,7 +554,9 @@ update msg debouncer =
             -- Just gets the current time, and then hands the message to our
             -- internal update function.
             ( debouncer
-            , Task.perform (MsgInternal << Debouncer.Internal.ManualEmitAt) Time.now
+            , Task.perform
+                (MsgInternal << Debouncer.Internal.ManualEmitAt << posixToMillis)
+                Time.now
             , Nothing
             )
 
@@ -583,9 +575,9 @@ update msg debouncer =
                     intervals
                         |> List.map
                             (\interval ->
-                                Process.sleep interval
+                                Process.sleep (toFloat interval)
                                     |> Task.andThen (always Time.now)
-                                    |> Task.perform (MsgInternal << Debouncer.Internal.Check)
+                                    |> Task.perform (MsgInternal << Debouncer.Internal.Check << posixToMillis)
                             )
                         |> Cmd.batch
             in

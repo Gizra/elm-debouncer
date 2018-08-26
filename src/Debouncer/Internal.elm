@@ -1,4 +1,4 @@
-module Debouncer.Internal exposing (..)
+module Debouncer.Internal exposing (Accumulator, Config(..), ConfigRecord, Debouncer(..), Milliseconds, Msg(..), State(..), UnsettledState, accumulateWith, addInputs, allInputs, appendInputToOutput, appendOutputToInput, cancel, debounce, emitFirstInput, emitWhenUnsettled, emitWhileUnsettled, firstInput, lastInput, manual, nothingIfNegative, sanitizeConfig, settleWhenQuietFor, throttle, toDebouncer, update)
 
 {-| The purpose of this module is to expose the "guts" of the logic so that it
 can be tested. It is not in the "exposed-modules" of the elm-package.json file,
@@ -19,7 +19,12 @@ The user-facing documentation for these types is in `Debouncer.Basic` and
 -}
 
 import List.Extra
-import Time exposing (Time)
+
+
+{-| A useful reminder of what our intervals mean.
+-}
+type alias Milliseconds =
+    Int
 
 
 {-| Our basic type. Pairs a configuration with some state that changes as
@@ -63,6 +68,7 @@ firstInput i =
 {-| Accumulates all inputs in a list.
 
 Note that the output list will have the most recent input first.
+
 -}
 allInputs : Accumulator i (List i)
 allInputs i o =
@@ -115,11 +121,12 @@ automatically emit at all for one kind of event or another.
 If all three are `Nothing`, then the debouncer will never automatically
 emit -- you would have to tell it to emit at some point, based on some
 external event.
+
 -}
 type alias ConfigRecord i o =
-    { emitWhenUnsettled : Maybe Time
-    , emitWhileUnsettled : Maybe Time
-    , settleWhenQuietFor : Maybe Time
+    { emitWhenUnsettled : Maybe Milliseconds
+    , emitWhileUnsettled : Maybe Milliseconds
+    , settleWhenQuietFor : Maybe Milliseconds
     , accumulator : Accumulator i o
     }
 
@@ -169,8 +176,9 @@ emit any subsequent input once the debouncer was quiet for 2 seconds.
 
     debounce (2 * Time.second)
         |> emitWhenUnsettled (Just 0)
+
 -}
-debounce : Time -> Config i i
+debounce : Milliseconds -> Config i i
 debounce interval =
     settleWhenQuietFor (Just interval) manual
 
@@ -184,15 +192,16 @@ So, `throttle (2 * Time.second)` is equivalent to
     manual
         |> emitWhileUnsettled (Just (2 * Time.second))
         |> emitWhenUnsettled (Just 0)
+
 -}
-throttle : Time -> Config i i
+throttle : Milliseconds -> Config i i
 throttle interval =
     manual
         |> emitWhileUnsettled (Just interval)
         |> emitWhenUnsettled (Just 0)
 
 
-emitWhenUnsettled : Maybe Time -> Config i o -> Config i o
+emitWhenUnsettled : Maybe Milliseconds -> Config i o -> Config i o
 emitWhenUnsettled time (Config config) =
     Config
         { config | emitWhenUnsettled = time }
@@ -212,22 +221,24 @@ input when becoming unsettled.
 For more complex cases, where you want to emit the first input on
 a different interval than others, but not immediately, you can
 use `emitWhenSettled` directly.
+
 -}
 emitFirstInput : Bool -> Config i o -> Config i o
 emitFirstInput choice =
     if choice then
         emitWhenUnsettled (Just 0)
+
     else
         emitWhenUnsettled Nothing
 
 
-emitWhileUnsettled : Maybe Time -> Config i o -> Config i o
+emitWhileUnsettled : Maybe Milliseconds -> Config i o -> Config i o
 emitWhileUnsettled time (Config config) =
     Config
         { config | emitWhileUnsettled = time }
 
 
-settleWhenQuietFor : Maybe Time -> Config i o -> Config i o
+settleWhenQuietFor : Maybe Milliseconds -> Config i o -> Config i o
 settleWhenQuietFor time (Config config) =
     Config
         { config | settleWhenQuietFor = time }
@@ -239,7 +250,11 @@ type of the acummulator provided.
 accumulateWith : Accumulator i o -> Config a b -> Config i o
 accumulateWith accumulator (Config config) =
     Config
-        { config | accumulator = accumulator }
+        { accumulator = accumulator
+        , emitWhenUnsettled = config.emitWhenUnsettled
+        , emitWhileUnsettled = config.emitWhileUnsettled
+        , settleWhenQuietFor = config.settleWhenQuietFor
+        }
 
 
 toDebouncer : Config i o -> Debouncer i o
@@ -265,6 +280,7 @@ nothingIfNegative =
         (\num ->
             if num < 0 then
                 Nothing
+
             else
                 Just num
         )
@@ -281,19 +297,19 @@ unsettled, due to `emitWhileUnsettled`. And, we could arrive at
 necessarily emit anything when we become settled.
 -}
 type alias UnsettledState o =
-    { unsettledAt : Time
-    , lastInputProvidedAt : Time
-    , lastEmittedAt : Maybe Time
+    { unsettledAt : Milliseconds
+    , lastInputProvidedAt : Milliseconds
+    , lastEmittedAt : Maybe Milliseconds
     , output : Maybe o
     }
 
 
 type Msg i
-    = InputProvidedAt i Time
+    = InputProvidedAt i Milliseconds
     | ManualCancel
     | ManualSettle
-    | ManualEmitAt Time
-    | Check Time
+    | ManualEmitAt Milliseconds
+    | Check Milliseconds
 
 
 {-| The second return parameter is not a `Cmd`, but instead a list of intervals
@@ -301,7 +317,7 @@ at which we ought to check whether to emit something. This assists with
 testability (since we can test whether that list is correct). The caller is
 responsible for actually turning that list into commands.
 -}
-update : Msg i -> Debouncer i o -> ( Debouncer i o, List Time, Maybe o )
+update : Msg i -> Debouncer i o -> ( Debouncer i o, List Milliseconds, Maybe o )
 update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
     case msg of
         InputProvidedAt input time ->
@@ -359,13 +375,14 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
                 ( checkedDebouncer, checkedIntervals, emit ) =
                     if checkNow then
                         update (Check time) newDebouncer
+
                     else
                         ( newDebouncer, [], Nothing )
             in
-                ( checkedDebouncer
-                , checkedIntervals ++ checkLater
-                , emit
-                )
+            ( checkedDebouncer
+            , checkedIntervals ++ checkLater
+            , emit
+            )
 
         ManualCancel ->
             -- This is actually equivalent to `cancel`, but it's here as a convenience
@@ -389,10 +406,10 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
                         Unsettled unsettled ->
                             unsettled.output
             in
-                ( cancel debouncer
-                , []
-                , emit
-                )
+            ( cancel debouncer
+            , []
+            , emit
+            )
 
         ManualEmitAt time ->
             -- We've been told to emit at this time, even if we wouldn't normally.
@@ -421,16 +438,16 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
                                     -- Since we're emitting, we should schedule a check
                                     -- if config.emitWhileUnsettled is set.
                                     case config.emitWhenUnsettled of
-                                        Just emitWhileUnsettled ->
-                                            [ emitWhileUnsettled ]
+                                        Just emit ->
+                                            [ emit ]
 
                                         Nothing ->
                                             []
                             in
-                                ( Debouncer wrappedConfig newState
-                                , intervals
-                                , unsettled.output
-                                )
+                            ( Debouncer wrappedConfig newState
+                            , intervals
+                            , unsettled.output
+                            )
 
                         Nothing ->
                             -- If we have nothing to emit, then our state stays
@@ -478,7 +495,7 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
                         -- Should we emit because of emitWhenUnsettled?
                         becauseEmitWhenUnsettled =
                             case config.emitWhenUnsettled of
-                                Just emitWhenUnsettled ->
+                                Just interval ->
                                     case unsettled.lastEmittedAt of
                                         Just _ ->
                                             -- If we've emitted since becomming unsettled, then
@@ -488,7 +505,7 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
                                         Nothing ->
                                             -- If not, see if enough time has passed since we
                                             -- became unsettled.
-                                            unsettled.unsettledAt + emitWhenUnsettled <= time
+                                            unsettled.unsettledAt + interval <= time
 
                                 Nothing ->
                                     -- We're not configured to emit for this reason
@@ -497,18 +514,18 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
                         -- Should we emit because of emitWhileUnsettled?
                         becauseEmitWhileUnsettled =
                             case config.emitWhileUnsettled of
-                                Just emitWhileUnsettled ->
+                                Just interval ->
                                     case unsettled.lastEmittedAt of
                                         Just lastEmittedAt ->
                                             -- Check if enough time has passed since we last
                                             -- emitted.
-                                            lastEmittedAt + emitWhileUnsettled <= time
+                                            lastEmittedAt + interval <= time
 
                                         Nothing ->
                                             -- We haven't emitted since becoming unsettled,
                                             -- so check whether enough time has passed since
                                             -- becoming unsettled.
-                                            unsettled.unsettledAt + emitWhileUnsettled <= time
+                                            unsettled.unsettledAt + interval <= time
 
                                 Nothing ->
                                     -- We're not configured to emit for this reason
@@ -516,7 +533,7 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
 
                         shouldSettle =
                             config.settleWhenQuietFor
-                                |> Maybe.map (\settleWhenQuietFor -> unsettled.lastInputProvidedAt + settleWhenQuietFor <= time)
+                                |> Maybe.map (\interval -> unsettled.lastInputProvidedAt + interval <= time)
                                 |> Maybe.withDefault False
 
                         shouldEmit =
@@ -529,6 +546,7 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
                         emit =
                             if shouldEmit then
                                 unsettled.output
+
                             else
                                 Nothing
 
@@ -545,6 +563,7 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
                                 -- be done. But it would be nice to optimize away previously-scheduled
                                 -- checks that are now known to be spurious.
                                 Settled
+
                             else if shouldEmit then
                                 -- We're actually emitting something, so reset our `output`
                                 -- to `Nothing`, and record the time.
@@ -553,6 +572,7 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
                                         | lastEmittedAt = Just time
                                         , output = Nothing
                                     }
+
                             else
                                 -- If we're neither settling nor emitting, then nothing has changed
                                 state
@@ -562,15 +582,16 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
                                 -- If we're emitting but not settling, then check emitWhileUnsettled
                                 -- to see whether we need to schedule a check
                                 case config.emitWhileUnsettled of
-                                    Just emitWhileUnsettled ->
-                                        [ emitWhileUnsettled ]
+                                    Just interval ->
+                                        [ interval ]
 
                                     Nothing ->
                                         []
+
                             else
                                 []
                     in
-                        ( Debouncer wrappedConfig newState
-                        , intervals
-                        , emit
-                        )
+                    ( Debouncer wrappedConfig newState
+                    , intervals
+                    , emit
+                    )

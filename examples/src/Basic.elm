@@ -1,4 +1,4 @@
-module Basic exposing (..)
+module Basic exposing (Model, Msg(..), init, main, update, view)
 
 {-| This shows an implementation of debouncing your own `Msg` type using
 `Debouncer.Basic`. It's actually better to use `Debouncer.Messages` for this --
@@ -6,11 +6,11 @@ see the `Messages` example for that simplified approach. But you could use
 `Debouncer.Basics` in other cases -- it is more general.
 -}
 
+import Browser
 import Debouncer.Basic as Debouncer exposing (Debouncer, provideInput, settleWhenQuietFor, toDebouncer)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Time exposing (Time)
 
 
 type alias Model =
@@ -23,7 +23,7 @@ init : ( Model, Cmd Msg )
 init =
     ( { quietForOneSecond =
             Debouncer.manual
-                |> settleWhenQuietFor (Just <| 1 * Time.second)
+                |> settleWhenQuietFor (Just <| 1 * 1000)
                 |> toDebouncer
       , messages = []
       }
@@ -66,7 +66,7 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div [ style [ ( "margin", "1em" ) ] ]
+    div [ style "margin" "1em" ]
         [ button
             [ DoSomething
                 |> provideInput
@@ -81,10 +81,10 @@ view model =
         ]
 
 
-main : Program Never Model Msg
+main : Program () Model Msg
 main =
-    Html.program
-        { init = init
+    Browser.element
+        { init = always init
         , view = view
         , update = update
         , subscriptions = always Sub.none

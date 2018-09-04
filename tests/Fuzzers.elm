@@ -1,24 +1,23 @@
-module Fuzzers exposing (..)
+module Fuzzers exposing (fuzzCheck, fuzzInputProvidedAt, fuzzInterval, fuzzMsg, fuzzSimpleAccumulator, fuzzSimpleConfig, fuzzSimpleDebouncer, fuzzState, fuzzTime)
 
 import Debouncer.Internal exposing (..)
 import Fuzz exposing (Fuzzer)
-import Time exposing (Time)
 
 
 {-| We just need a kind of arbitrary time range to work within. Note that
 this is for times, not intervals. We make this relatively small so that
 our random intervals have a reasonable chance of tripping over the times.
 -}
-fuzzTime : Fuzzer Time
+fuzzTime : Fuzzer Milliseconds
 fuzzTime =
-    Fuzz.floatRange 10000 11000
+    Fuzz.intRange 10000 11000
 
 
 {-| Fuzz the kind of intervals you'd expect.
 -}
-fuzzInterval : Fuzzer Time
+fuzzInterval : Fuzzer Milliseconds
 fuzzInterval =
-    Fuzz.floatRange 0 500
+    Fuzz.intRange 0 500
 
 
 fuzzState : Fuzzer o -> Fuzzer (State o)

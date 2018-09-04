@@ -7,7 +7,7 @@ see the `Messages` example for that simplified approach. But you could use
 -}
 
 import Browser
-import Debouncer.Basic as Debouncer exposing (Debouncer, provideInput, settleWhenQuietFor, toDebouncer)
+import Debouncer.Basic as Debouncer exposing (Debouncer, fromSeconds, provideInput, settleWhenQuietFor, toDebouncer)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -23,7 +23,7 @@ init : ( Model, Cmd Msg )
 init =
     ( { quietForOneSecond =
             Debouncer.manual
-                |> settleWhenQuietFor (Just <| 1 * 1000)
+                |> settleWhenQuietFor (Just <| fromSeconds 1)
                 |> toDebouncer
       , messages = []
       }

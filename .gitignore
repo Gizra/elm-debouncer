@@ -6,3 +6,4 @@ elm.js
 index.html
 node_modules
 build
+tests/Doc

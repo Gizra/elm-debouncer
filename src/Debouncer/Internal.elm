@@ -1,4 +1,4 @@
-module Debouncer.Internal exposing (Accumulator, Config(..), ConfigRecord, Debouncer(..), Milliseconds, Msg(..), State(..), UnsettledState, accumulateWith, addInputs, allInputs, appendInputToOutput, appendOutputToInput, cancel, debounce, emitFirstInput, emitWhenUnsettled, emitWhileUnsettled, firstInput, lastInput, manual, nothingIfNegative, sanitizeConfig, settleWhenQuietFor, throttle, toDebouncer, update)
+module Debouncer.Internal exposing (Accumulator, Config(..), ConfigRecord, Debouncer(..), Milliseconds, Msg(..), State(..), UnsettledState, accumulateWith, addInputs, allInputs, appendInputToOutput, appendOutputToInput, cancel, debounce, emitFirstInput, emitWhenUnsettled, emitWhileUnsettled, firstInput, fromSeconds, lastInput, manual, nothingIfNegative, sanitizeConfig, settleWhenQuietFor, throttle, toDebouncer, update)
 
 {-| The purpose of this module is to expose the "guts" of the logic so that it
 can be tested. It is not in the "exposed-modules" of the elm-package.json file,
@@ -25,6 +25,16 @@ import List.Extra
 -}
 type alias Milliseconds =
     Int
+
+
+{-| A convenience when you'd rather think in seconds than milliseconds.
+
+    fromSeconds 0.5 --> 500
+
+-}
+fromSeconds : Float -> Milliseconds
+fromSeconds s =
+    round (s * 1000)
 
 
 {-| Our basic type. Pairs a configuration with some state that changes as

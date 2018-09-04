@@ -1,10 +1,10 @@
 module Debouncer.Messages exposing
     ( Debouncer, DebouncerConfig, toDebouncer
     , manual, debounce, throttle
+    , Milliseconds, fromSeconds
     , settleWhenQuietFor, emitWhenUnsettled, emitFirstInput, emitWhileUnsettled
     , accumulateWith, lastInput, firstInput
     , Msg, provideInput, emitNow, settleNow, cancel, cancelNow, UpdateConfig, update
-    , Milliseconds
     )
 
 {-| Ths module allows you to "smooth out" messages over time, so that they
@@ -27,11 +27,11 @@ type, and handle it in your `update` function. Here's one example -- it's the
 same example as given in `Debouncer.Basic`, but you can see that it's simpler
 here.
 
-    import Debouncer.Messages as Debouncer exposing (Debouncer, provideInput, settleWhenQuietFor, toDebouncer)
+    import Browser
+    import Debouncer.Messages as Debouncer exposing (Debouncer, fromSeconds, provideInput, settleWhenQuietFor, toDebouncer)
     import Html exposing (..)
     import Html.Attributes exposing (..)
     import Html.Events exposing (..)
-    import Time exposing (Time)
 
     type alias Model =
         { quietForOneSecond : Debouncer Msg
@@ -41,8 +41,8 @@ here.
     init : ( Model, Cmd Msg )
     init =
         ( { quietForOneSecond =
-                Debouncer.config
-                    |> settleWhenQuietFor (1 * Time.second)
+                Debouncer.manual
+                    |> settleWhenQuietFor (Just <| fromSeconds 1)
                     |> toDebouncer
           , messages = []
           }
@@ -87,10 +87,10 @@ here.
                 |> div []
             ]
 
-    main : Program Never Model Msg
+    main : Program () Model Msg
     main =
-        Html.program
-            { init = init
+        Browser.element
+            { init = always init
             , view = view
             , update = update
             , subscriptions = always Sub.none
@@ -105,6 +105,7 @@ here.
 ## Creating a configuration
 
 @docs manual, debounce, throttle
+@docs Milliseconds, fromSeconds
 @docs settleWhenQuietFor, emitWhenUnsettled, emitFirstInput, emitWhileUnsettled
 @docs accumulateWith, lastInput, firstInput
 
@@ -116,6 +117,7 @@ here.
 -}
 
 import Debouncer.Basic exposing (Accumulator)
+import Debouncer.Internal
 import List.Extra
 import Maybe
 import Process
@@ -135,7 +137,7 @@ To create a `Debouncer`, start with a `config`, modify the config as needed,
 and then use `toDebouncer`. For instance:
 
     config
-        |> settleWhenQuietFor (0.5 * Time.second)
+        |> settleWhenQuietFor (fromSeconds 0.5)
         |> toDebouncer
 
 -}
@@ -149,14 +151,24 @@ type alias Milliseconds =
     Int
 
 
+{-| A convenience when you'd rather think in seconds than milliseconds.
+
+    fromSeconds 0.5 --> 500
+
+-}
+fromSeconds : Float -> Milliseconds
+fromSeconds =
+    Debouncer.Internal.fromSeconds
+
+
 {-| An opaque type representing the configuration needed for a debouncer.
 
 To create a debouncer, start with `config`, modify it as needed, and then
 use `toDebouncer`. For instance:
 
     config
-        |> settleWhenQuietFor (2.0 * Time.second)
-        |> emitWhileUnsettled (0.5 * Time.second)
+        |> settleWhenQuietFor (fromSeconds 2.0)
+        |> emitWhileUnsettled (fromSeconds 0.5)
         |> toDebouncer
 
 -}
@@ -193,17 +205,17 @@ manual =
 {-| A starting point for a configuring a debouncer which **debounces**--
 that is, which will emit once quiet for the time you specify.
 
-So, `debounce (2 * Time.second)` is equivalent to
+So, `debounce (fromSeconds 2)` is equivalent to
 
     manual
-        |> settleWhenQuietFor (Just (2 * Time.second))
+        |> settleWhenQuietFor (Just (fromSeconds 2))
 
 If you also want to emit using the first input, then you can use
 `emitWhenSettled`. For instance, the following configuration would emit the
 first input immediately when becoming unsettled, and then emit any
 subsequent input once the debouncer was quiet for 2 seconds.
 
-    debounce (2 * Time.second)
+    debounce (fromSeconds 2)
         |> emitWhenUnsettled (Just 0)
 
 -}
@@ -216,10 +228,10 @@ debounce =
 which will emit the first input immediately, and then accmulate and
 emit no more often than the specified interval.
 
-So, `throttle (2 * Time.second)` is equivalent to
+So, `throttle (fromSeconds 2)` is equivalent to
 
     manual
-        |> emitWhileUnsettled (Just (2 * Time.second))
+        |> emitWhileUnsettled (Just (fromSeconds 2))
         |> emitWhenUnsettled (Just 0)
 
 -}

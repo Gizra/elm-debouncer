@@ -7,7 +7,7 @@ module Debouncer.Messages exposing
     , Msg, provideInput, emitNow, settleNow, cancel, cancelNow, UpdateConfig, update
     )
 
-{-| Ths module allows you to "smooth out" messages over time, so that they
+{-| This module allows you to "smooth out" messages over time, so that they
 don't get applied immediately -- instead, they are applied at a future moment.
 Depending on the configuration you provide, you can use this to implemented
 debouncing, throttling, or other ways of managing messages.
@@ -302,9 +302,9 @@ If you are "debouncing" (i.e. `emitWhileUnsettled` is `Nothing`), then this is
 the key parameter controlling when you will receive output -- you'll receive
 the output after no inputs have been provided for the specified time.
 
-If you are "throttling" (i.e. `emitWhileUnsettled is not`Nothing`), then this
+If you are "throttling" (i.e. `emitWhileUnsettled` is not `Nothing`), then this
 parameter won't make much difference, unless you are also specifying
-emitWhenUnsettled` in order to do something with the initial input.
+`emitWhenUnsettled` in order to do something with the initial input.
 
 -}
 settleWhenQuietFor : Maybe Milliseconds -> DebouncerConfig msg -> DebouncerConfig msg
@@ -317,8 +317,8 @@ so far?
 
 You can use one of the pre-built accumulators:
 
-    - `lastInput` (the default)
-    - `firstInput`
+  - `lastInput` (the default)
+  - `firstInput`
 
 Or, if you need to do something more complex, you can provide your own function
 of the form
@@ -449,9 +449,9 @@ your update function also needs to return.
 
 To make this work, we need some configuration:
 
-    - `mapMsg` is the tag, in your `Msg` type, that wraps our `Msg` type
-    - `getDebouncer` is a function we can use to get the debouncer from your `model` type
-    - `setDebouncer` is a function we can use to update your model with an updated debouncer
+  - `mapMsg` is the tag, in your `Msg` type, that wraps our `Msg` type
+  - `getDebouncer` is a function we can use to get the debouncer from your `model` type
+  - `setDebouncer` is a function we can use to update your model with an updated debouncer
 
 In practice, it is pretty straight-forward to specify these things -- see the
 `updateDebouncer` example in the module docs for one example:
@@ -483,13 +483,13 @@ to return.
 
 To make that work, you need to provide a couple of additional parameters.
 
-    - The first parameter is essentially your own `update` function. If your
-      `update` function takes additional parameters, you will need to partially
-      apply them. This allows us to immediately execute an emitted message at
-      the appropriate time, without you needing to handle it specially.
+  - The first parameter is essentially your own `update` function. If your
+    `update` function takes additional parameters, you will need to partially
+    apply them. This allows us to immediately execute an emitted message at
+    the appropriate time, without you needing to handle it specially.
 
-    - The second parameter allows us to update your model with the new debouncer
-      state, without you needing to handle it specially.
+  - The second parameter allows us to update your model with the new debouncer
+    state, without you needing to handle it specially.
 
 -}
 update : (msg -> model -> ( model, Cmd msg )) -> UpdateConfig msg model -> Msg msg -> model -> ( model, Cmd msg )

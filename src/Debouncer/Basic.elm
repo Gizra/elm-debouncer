@@ -8,7 +8,7 @@ module Debouncer.Basic exposing
     , Msg, provideInput, emitNow, settleNow, cancel, cancelNow, update
     )
 
-{-| Ths module allows you to managing inputs that occur over time, so that they
+{-| This module allows you to manage inputs that occur over time, so that they
 get handed back to you, at future moments, grouped in a way that you have
 configured. Depending on the configuration you provide, you can use this to
 implemented debouncing, throttling, or other ways of managing inputs that occur
@@ -163,7 +163,7 @@ The `o` type parameter represents the type of the output which will be emitted
 by the debouncer. In many cases, this will be the same thing as your input type
 -- for instance, you might provide your `Msg` type and get your `Msg` type
 back. However, you're not limited to that -- you can get a different type back
-if you like. (You just have to provide an `Accmulator` function to accumulate
+if you like. (You just have to provide an `Accumulator` function to accumulate
 your inputs into an output).
 
 To create a `Debouncer`:
@@ -237,7 +237,7 @@ firstInput =
     Debouncer.Internal.firstInput
 
 
-{-| An accmulator which keeps all the inputs in a `List`. You can use this
+{-| An accumulator which keeps all the inputs in a `List`. You can use this
 if you want the whole list once the deouncer emits its output. Note that the
 output list will have the most recent input first.
 -}
@@ -253,14 +253,14 @@ addInputs =
     Debouncer.Internal.addInputs
 
 
-{-| An accmulator which appends the input to the output so far.
+{-| An accumulator which appends the input to the output so far.
 -}
 appendInputToOutput : Accumulator appendable appendable
 appendInputToOutput =
     Debouncer.Internal.appendInputToOutput
 
 
-{-| An accumulator which appends the output to far to the input.
+{-| An accumulator which appends the output so far to the input.
 -}
 appendOutputToInput : Accumulator appendable appendable
 appendOutputToInput =
@@ -313,7 +313,7 @@ manual =
     Debouncer.Internal.manual
 
 
-{-| A starting point for a configuring a debouncer which **debounces**--
+{-| A starting point for configuring a debouncer which **debounces**--
 that is, which will emit once quiet for the time you specify.
 
 So, `debounce (fromSeconds 2)` is equivalent to
@@ -336,7 +336,7 @@ debounce interval =
 
 
 {-| A starting point for configuring a debouncer which throttles -- that is,
-which will emit the first input immediately, and then accmulate and
+which will emit the first input immediately, and then accumulate and
 emit no more often than the specified interval.
 
 So, `throttle (fromSeconds 2)` is equivalent to
@@ -413,12 +413,12 @@ emitWhileUnsettled =
 again?
 
 If you are "debouncing" (i.e. `emitWhileUnsettled` is `Nothing`), then this is
-the key parameter controlling when you will receive output -- you'll receive
+the key parameter controlling when you receive output -- you'll receive
 the output after no inputs have been provided for the specified time.
 
-If you are "throttling" (i.e. `emitWhileUnsettled is not`Nothing`), then this
+If you are "throttling" (i.e. `emitWhileUnsettled` is not `Nothing`), then this
 parameter won't make much difference, unless you are also specifying
-emitWhenUnsettled` in order to do something with the initial input.
+`emitWhenUnsettled` in order to do something with the initial input.
 
 -}
 settleWhenQuietFor : Maybe Milliseconds -> Config i o -> Config i o
@@ -431,12 +431,12 @@ so far?
 
 You can use several pre-built accumulators:
 
-    - `lastInput` (the default)
-    - `firstInput`
-    - `allInputs`
-    - `addInputs`
-    - `appendInputToOutput`
-    - `appendOutputToInput`
+  - `lastInput` (the default)
+  - `firstInput`
+  - `allInputs`
+  - `addInputs`
+  - `appendInputToOutput`
+  - `appendOutputToInput`
 
 Or, if none of those suit, you can provide your own function of the form
 

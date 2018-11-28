@@ -24,7 +24,7 @@ available for Elm already. My favourites are:
 So, why another one?
 
 One practical concern was that I needed an easy way to "cancel" a pending event.
-(You could implement cancelation on top of other debouncers, but it appeared that
+(You could implement cancellation on top of other debouncers, but it appeared that
 it would not be entirely straightforward). It also seemed that it would be possible
 to consolidate different approaches to debouncing in an interesting way.
 
@@ -103,7 +103,7 @@ package).
 
 #### What are the things?
 
-So, what are these "things" we grouping over time? In Elm, the basic candidates
+So, what are these "things" we are grouping over time? In Elm, the basic candidates
 are tasks or messages, since those are the things that happen at some
 particular time. In a way, you could implement one in terms of the other, since
 you can construct a `Task` to send a message, and you can use a message to
@@ -123,7 +123,6 @@ times, and emits them, grouped in some way, at other times, whatever they are.
 It will be apparent that a debouncer needs to keep some state, and schedule some
 events. There are some Elm debouncers that use effects modules to do this.
 
-- [unbounce/elm-debounce](https://github.com/unbounce/elm-debounce)
 - [mceldeen/elm-debouncer](https://github.com/mceldeen/elm-debouncer)
 
 This is convenient because the debouncer can manage its own state -- you don't
@@ -136,7 +135,7 @@ client code explicitly manage the state.
 So, it seems best to provide things to a debouncer by:
 
 - including the debouncer in your model;
-- delegating its messasges via your `update` function.
+- delegating its messages via your `update` function.
 
 As far as emitting things goes, there would be a number of options. You could
 imagine an extra parameter returned from an `update` function (meaning: I've
@@ -153,7 +152,7 @@ or the links to the right, if you're already there.
 
 ## Installation
 
-Try `elm-package install Gizra/elm-debouncer`
+Try `elm install Gizra/elm-debouncer`
 
 ## Development
 

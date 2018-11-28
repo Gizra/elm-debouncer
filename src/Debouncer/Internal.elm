@@ -1,7 +1,7 @@
 module Debouncer.Internal exposing (Accumulator, Config(..), ConfigRecord, Debouncer(..), Milliseconds, Msg(..), State(..), UnsettledState, accumulateWith, addInputs, allInputs, appendInputToOutput, appendOutputToInput, cancel, debounce, emitFirstInput, emitWhenUnsettled, emitWhileUnsettled, firstInput, fromSeconds, lastInput, manual, nothingIfNegative, sanitizeConfig, settleWhenQuietFor, throttle, toDebouncer, update)
 
 {-| The purpose of this module is to expose the "guts" of the logic so that it
-can be tested. It is not in the "exposed-modules" of the elm-package.json file,
+can be tested. It is not in the "exposed-modules" of the elm.json file,
 so it's not directly accessible to clients of the package.
 
 Testing just the things exposed to clients of the package would be awkward,
@@ -44,7 +44,7 @@ type Debouncer i o
     = Debouncer (Config i o) (State o)
 
 
-{-| Cancelation is one way we can directly modify a debouncer. Basically, we
+{-| Cancellation is one way we can directly modify a debouncer. Basically, we
 just forget our state. There may be future `Check ...` messages coming, but
 they will consider what to do based solely on our state at that time. So,
 forgetting our state is sufficient to "cancel" any pending output.
@@ -125,7 +125,7 @@ type Config i o
     = Config (ConfigRecord i o)
 
 
-{-| Each of the times is a `Maybe`, since you don't necessarily want to
+{-| Each of the items is a `Maybe`, since you don't necessarily want to
 automatically emit at all for one kind of event or another.
 
 If all three are `Nothing`, then the debouncer will never automatically
@@ -461,7 +461,7 @@ update msg ((Debouncer ((Config config) as wrappedConfig) state) as debouncer) =
 
                         Nothing ->
                             -- If we have nothing to emit, then our state stays
-                            -- the same.  That is, we only update our state if
+                            -- the same. That is, we only update our state if
                             -- we have something to emit.
                             ( debouncer, [], Nothing )
 
